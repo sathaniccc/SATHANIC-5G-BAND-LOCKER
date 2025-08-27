@@ -1,0 +1,113 @@
+#!/data/data/com.termux/files/usr/bin/bash
+# SATHANIC 5G LOCKDOWN — by Sathanic
+VERSION="1.0.0"
+CMD="s5gl"
+LOG_DIR="$HOME/.s5gl"
+SPEED_LOG="$LOG_DIR/speedtests.csv"
+
+banner() {
+  RED='\033[31m'; RESET='\033[0m'
+  echo -e "${RED}"
+  cat <<'EOF'
+   ███████╗ █████╗ ████████╗██╗  ██╗ █████╗ ███╗   ██╗██╗ ██████╗ 
+   ██╔════╝██╔══██╗╚══██╔══╝██║  ██║██╔══██╗████╗  ██║██║██╔════╝ 
+   ███████╗███████║   ██║   ███████║███████║██╔██╗ ██║██║██║  ███╗
+   ╚════██║██╔══██║   ██║   ██╔══██║██╔══██║██║╚██╗██║██║██║   ██║
+   ███████║██║  ██║   ██║   ██║  ██║██║  ██║██║ ╚████║██║╚██████╔╝
+   ╚══════╝╚═╝  ╚═╝   ╚═╝   ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═══╝╚═╝ ╚═════╝ 
+EOF
+  echo -e "${RESET}"
+  echo -e "  🚀  ${RED}SATHANIC 5G LOCKDOWN — by Sathanic${RESET}  v$VERSION"
+}
+
+help_menu() {
+  banner
+  cat <<EOF
+
+Usage:
+  $CMD status        : Show 5G/NR status & signals
+  $CMD speed         : Speedtest + CSV log
+  $CMD lock <mode>   : network lock (nr-only | nr-lte | lte-only | auto)
+  $CMD current       : show preferred network setting
+  $CMD guide         : brand-specific lock guide
+  $CMD help          : show this help
+EOF
+}
+
+status_cmd() {
+  banner
+  echo "== Network Type =="
+  getprop gsm.network.type
+  echo "== Telephony Info =="
+  dumpsys telephony 2>/dev/null | grep -iE "mServiceState|mDataNetworkType|5G|NR|SignalStrength" | sed 's/^[ \t]*//'
+}
+
+speed_cmd() {
+  banner
+  mkdir -p "$LOG_DIR"
+  [ -f "$SPEED_LOG" ] || echo "timestamp,operator,rat,ping,down,up,server" > "$SPEED_LOG"
+  echo "[*] Running speedtest..."
+  OUT=$(python -m speedtest --json 2>/dev/null)
+  if [ -z "$OUT" ]; then echo "[!] Install speedtest-cli via pip"; exit 1; fi
+  PING=$(echo "$OUT" | jq .ping)
+  DOWN=$(echo "$OUT" | jq '.download/1000000' | awk '{printf "%.2f", $1}')
+  UP=$(echo "$OUT" | jq '.upload/1000000' | awk '{printf "%.2F", $1}')
+  SERVER=$(echo "$OUT" | jq -r .server.sponsor)
+  RAT=$(getprop gsm.network.type); OP=$(getprop gsm.operator.alpha)
+  printf "Ping: %s ms\nDown: %s Mbps\nUp: %s Mbps\nServer: %s\n" "$PING" "$DOWN" "$UP" "$SERVER"
+  echo "$(date '+%F %T'),${OP},${RAT},${PING},${DOWN},${UP},${SERVER}" >> "$SPEED_LOG"
+  echo "Saved to $SPEED_LOG"
+}
+
+lock_cmd() {
+  MODE="$1"; [ -z "$MODE" ] && { echo "Usage: $CMD lock <mode>"; exit 1; }
+  echo "[*] Applying mode: $MODE ..."
+  case "$MODE" in
+    nr-only) su -c "settings put global preferred_network_mode 67" ;;
+    nr-lte)  su -c "settings put global preferred_network_mode 65" ;;
+    lte-only) su -c "settings put global preferred_network_mode 11" ;;
+    auto)    su -c "settings put global preferred_network_mode 0" ;;
+    *) echo "Invalid mode"; exit 1 ;;
+  esac
+  echo "[!] Note: Some devices ignore this setting."
+}
+
+current_cmd() {
+  banner
+  echo "Preferred network modes:"
+  for K in preferred_network_mode preferred_network_mode1 preferred_network_mode2; do
+    su -c "settings get global $K" 2>/dev/null
+  done
+}
+
+guide_cmd() {
+  banner
+  BRAND=$(getprop ro.product.brand | tr a-z A-Z)
+  MODEL=$(getprop ro.product.model)
+  echo "Device: $BRAND ($MODEL)"
+  case "$BRAND" in
+    SAMSUNG)
+      echo "- Samsung: Dial *#*#27663368378#*#* → NR/LTE settings"
+      ;;
+    XIAOMI|REDMI|POCO)
+      echo "- Try $CMD lock nr-lte"
+      echo "- Full band lock: DIAG + QPST/QXDM on PC"
+      ;;
+    REALME|OPPO|VIVO|IQOO)
+      echo "- Use EngineerMode (dial code varies)"
+      ;;
+    *)
+      echo "- Generic Android: results vary"
+      ;;
+  esac
+}
+
+case "$1" in
+  status) status_cmd ;;
+  speed) speed_cmd ;;
+  lock) shift; lock_cmd "$@" ;;
+  current) current_cmd ;;
+  guide) guide_cmd ;;
+  help|"") help_menu ;;
+  *) echo "Unknown cmd"; help_menu ; exit 1 ;;
+esac
