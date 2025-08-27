@@ -29,3 +29,12 @@ printf ".s5gl/\n.DS_Store\n*.swp\nThumbs.db\n" > .gitignore
 git init
 git add .
 git commit -m "feat: initial release (v1.0.0)"
+
+SATHANIC-5G-BAND-LOCKER/
+│
+├── s5gl          ← main tool script (all functions inside)
+├── install.sh    ← installer (copy tool to $PREFIX/bin/)
+├── README.md     ← documentation (how to use)
+├── CHANGELOG.md  ← version history
+├── LICENSE       ← license (MIT recommended)
+└── .gitignore    ← ignore junk files
