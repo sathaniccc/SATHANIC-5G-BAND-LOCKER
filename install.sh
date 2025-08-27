@@ -1,4 +1,3 @@
-#!/bin/bash
 # Installer for SATHANIC 5G BAND LOCKER
 
 echo "[*] Installing SATHANIC 5G BAND LOCKER..."
