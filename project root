@@ -1,0 +1,8 @@
+git init
+git add s5gl install.sh README.md CHANGELOG.md LICENSE .gitignore
+git commit -m "Initial release v1.0.0"
+git branch -M main
+git remote add origin https://github.com/sathaniccc/SATHANIC-5G-BAND-LOCKER.git
+git push -u origin main
+git tag v1.0.0
+git push origin v1.0.0
