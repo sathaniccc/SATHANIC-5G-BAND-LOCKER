@@ -2,4 +2,4 @@
 set -e
 install -Dm755 s5gl "$PREFIX/bin/s5gl"
 echo "Installed: $PREFIX/bin/s5gl"
-echo "Run: s5gl help"￼Enter
+echo "Run: s5gl help"
